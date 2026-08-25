@@ -118,9 +118,7 @@ def call_groq(
         if not raw_text:
             raise RuntimeError("Failed to generate response from Groq after 10 rate-limit attempts. Please wait a minute and try again.")
             
-        # DEBUG: write raw text to file
-        with open("groq_debug.txt", "a", encoding="utf-8") as f:
-            f.write(raw_text + "\n")
+        # Debug writing removed to support Vercel's read-only file system
             
         try:
             # Basic JSON cleanup
