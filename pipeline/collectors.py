@@ -5,6 +5,7 @@ Data collection branches for the research pipeline.
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
 
+import json
 import requests
 from bs4 import BeautifulSoup
 
@@ -89,3 +90,166 @@ def _safe_scrape(fn, comp):
     except Exception as exc:  # noqa: BLE001
         logger.warning("Failed to scrape %s: %s", comp.get("url"), exc)
         return None
+
+@safe_branch(default=[])
+def fetch_market_news(api_key: str, geo: str, competitors: list[dict]) -> list[dict]:
+    """Search Google News for specific competitor market shifts."""
+    if not api_key: return []
+    url = "https://google.serper.dev/news"
+    results = []
+    
+    def fetch_one(comp):
+        payload = json.dumps({"q": f"{comp['name']} hair restoration", "gl": geo.split(',')[0].lower()})
+        headers = {'X-API-KEY': api_key, 'Content-Type': 'application/json'}
+        resp = requests.post(url, headers=headers, data=payload, timeout=15)
+        resp.raise_for_status()
+        return resp.json(), comp['name']
+        
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(fetch_one, comp) for comp in competitors]
+        for fut in futures:
+            try:
+                data, name = fut.result()
+                for item in data.get("news", [])[:1]:
+                    results.append({
+                        "source": name,
+                        "type": "market_news",
+                        "url": item.get("link", ""),
+                        "date": datetime.now(timezone.utc).isoformat(),
+                        "text": f"Google News for {name}: {item.get('title')}. {item.get('snippet')}",
+                    })
+            except Exception:
+                pass
+    return results
+
+@safe_branch(default=[])
+def fetch_social_listening(api_key: str, geo: str, competitors: list[dict]) -> list[dict]:
+    """Search Reddit/Quora for specific competitor customer pain points."""
+    if not api_key: return []
+    url = "https://google.serper.dev/search"
+    results = []
+    
+    def fetch_one(comp):
+        payload = json.dumps({"q": f"(site:reddit.com OR site:quora.com) {comp['name']} hair", "gl": geo.split(',')[0].lower()})
+        headers = {'X-API-KEY': api_key, 'Content-Type': 'application/json'}
+        resp = requests.post(url, headers=headers, data=payload, timeout=15)
+        resp.raise_for_status()
+        return resp.json(), comp['name']
+        
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(fetch_one, comp) for comp in competitors]
+        for fut in futures:
+            try:
+                data, name = fut.result()
+                for item in data.get("organic", [])[:1]:
+                    results.append({
+                        "source": name,
+                        "type": "social_listening",
+                        "url": item.get("link", ""),
+                        "date": datetime.now(timezone.utc).isoformat(),
+                        "text": f"Reddit discussion for {name}: {item.get('title')}. {item.get('snippet')}",
+                    })
+            except Exception:
+                pass
+    return results
+
+@safe_branch(default=[])
+def fetch_emerging_trends(api_key: str, geo: str, competitors: list[dict]) -> list[dict]:
+    """Search Google for competitor-specific trends and search results."""
+    if not api_key: return []
+    url = "https://google.serper.dev/search"
+    results = []
+    
+    def fetch_one(comp):
+        payload = json.dumps({"q": f"{comp['name']} hair transplant reviews", "gl": geo.split(',')[0].lower()})
+        headers = {'X-API-KEY': api_key, 'Content-Type': 'application/json'}
+        resp = requests.post(url, headers=headers, data=payload, timeout=15)
+        resp.raise_for_status()
+        return resp.json(), comp['name']
+        
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(fetch_one, comp) for comp in competitors]
+        for fut in futures:
+            try:
+                data, name = fut.result()
+                for item in data.get("organic", [])[:1]:
+                    results.append({
+                        "source": name,
+                        "type": "emerging_trends",
+                        "url": item.get("link", ""),
+                        "date": datetime.now(timezone.utc).isoformat(),
+                        "text": f"Google Search Result for {name}: {item.get('title')}. {item.get('snippet')}",
+                    })
+            except Exception:
+                pass
+    return results
+
+@safe_branch(default=[])
+def fetch_google_reviews(api_key: str, geo: str, competitors: list[dict]) -> list[dict]:
+    """Search Google Places for specific competitor local reviews."""
+    if not api_key: return []
+    url = "https://places.googleapis.com/v1/places:searchText"
+    headers = {
+        "X-Goog-Api-Key": api_key,
+        "X-Goog-FieldMask": "places.displayName,places.rating,places.userRatingCount",
+        "Content-Type": "application/json"
+    }
+    results = []
+    
+    def fetch_one(comp):
+        payload = {"textQuery": f"{comp['name']} hair restoration clinic"}
+        resp = requests.post(url, headers=headers, json=payload, timeout=15)
+        resp.raise_for_status()
+        return resp.json(), comp['name']
+        
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(fetch_one, comp) for comp in competitors]
+        for fut in futures:
+            try:
+                data, name = fut.result()
+                for place in data.get("places", [])[:1]:
+                    display_name = place.get("displayName", {}).get("text")
+                    rating = place.get("rating")
+                    total_ratings = place.get("userRatingCount")
+                    if display_name and rating:
+                        results.append({
+                            "source": name,
+                            "type": "local_reviews",
+                            "url": f"https://maps.google.com/?q={display_name}",
+                            "date": datetime.now(timezone.utc).isoformat(),
+                            "text": f"Google Places Review for {name}: Rating {rating}/5 based on {total_ratings} reviews.",
+                        })
+            except Exception:
+                pass
+    return results
+
+@safe_branch(default=[])
+def fetch_youtube_content(api_key: str, geo: str, competitors: list[dict]) -> list[dict]:
+    """Search YouTube via Serper API for competitor video content."""
+    if not api_key: return []
+    url = "https://google.serper.dev/videos"
+    results = []
+    
+    def fetch_one(comp):
+        payload = json.dumps({"q": f"{comp['name']} hair", "gl": geo.split(',')[0].lower()})
+        headers = {'X-API-KEY': api_key, 'Content-Type': 'application/json'}
+        resp = requests.post(url, headers=headers, data=payload, timeout=15)
+        resp.raise_for_status()
+        return resp.json(), comp['name']
+        
+    with ThreadPoolExecutor(max_workers=5) as pool:
+        futures = [pool.submit(fetch_one, comp) for comp in competitors]
+        for fut in futures:
+            try:
+                data, name = fut.result()
+                for item in data.get("videos", [])[:1]:
+                    results.append({
+                        "source": name,
+                        "type": "youtube_content",
+                        "url": item.get("link", ""),
+                        "date": datetime.now(timezone.utc).isoformat(),
+                        "text": f"YouTube video for {name}: {item.get('title')}. {item.get('snippet')}",
+                    })
+            except Exception:
+                pass
+    return results

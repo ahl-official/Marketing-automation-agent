@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Digital Marketing Research Agent</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: rgba(30, 41, 59, 0.7);
+      --border: rgba(255, 255, 255, 0.1);
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --success: #10b981;
+      --warning: #f59e0b;
+      --danger: #ef4444;
+    }
+    
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      background-image: radial-gradient(circle at 15% 50%, rgba(59, 130, 246, 0.15), transparent 25%),
+                        radial-gradient(circle at 85% 30%, rgba(16, 185, 129, 0.15), transparent 25%);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex; flex-direction: column; align-items: center; padding: 2rem;
+    }
+
+    .container { width: 100%; max-width: 1200px; }
+
+    .header { text-align: center; margin-bottom: 2rem; }
+    .header h1 {
+      font-size: 2.5rem; font-weight: 700;
+      background: linear-gradient(135deg, #60a5fa, #3b82f6);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    .header p { color: var(--text-muted); }
+
+    .glass-panel {
+      background: var(--surface);
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+      border: 1px solid var(--border); border-radius: 16px; padding: 2rem;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
+      margin-bottom: 2rem;
+    }
+
+    h2 { font-size: 1.25rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; }
+
+    /* Tabs */
+    .tabs { display: flex; gap: 1rem; margin-bottom: 2rem; justify-content: center; }
+    .tab {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--text); padding: 0.75rem 2rem; border-radius: 8px;
+      cursor: pointer; font-weight: 600; transition: all 0.2s;
+    }
+    .tab.active { background: var(--primary); border-color: var(--primary); }
+    .tab:hover:not(.active) { background: rgba(255,255,255,0.1); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; }
+
+    /* Config Tab */
+    .competitor-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1rem; margin-bottom: 1rem; }
+    .competitor-card {
+      background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .competitor-info { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; flex: 1; padding-right: 1rem; }
+    .competitor-name { font-weight: 600; font-size: 1rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .competitor-url { font-size: 0.75rem; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .btn-delete {
+      background: transparent; color: var(--danger); border: 1px solid var(--danger);
+      padding: 0.25rem 0.5rem; border-radius: 4px; cursor: pointer; font-size: 0.75rem; transition: all 0.2s;
+    }
+    .btn-delete:hover { background: var(--danger); color: white; }
+    .add-competitor { display: flex; gap: 0.5rem; margin-top: 1rem; }
+    .add-competitor input {
+      flex: 1; background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white;
+      padding: 0.75rem; border-radius: 6px; font-family: 'Inter', sans-serif;
+    }
+
+    .btn { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+    .btn:hover { background: var(--primary-hover); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    
+    .btn-secondary { background: rgba(255,255,255,0.1); border: 1px solid var(--border); }
+    .btn-secondary:hover { background: rgba(255,255,255,0.2); }
+
+    /* Dashboard Tab */
+    .dashboard-filters { display: flex; gap: 1rem; margin-bottom: 2rem; }
+    .filter-select {
+      background: rgba(0,0,0,0.2); border: 1px solid var(--border); color: white;
+      padding: 0.75rem; border-radius: 6px; font-family: 'Inter', sans-serif; flex: 1;
+      appearance: none;
+    }
+
+    .dashboard-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+    @media(max-width: 900px) { .dashboard-grid { grid-template-columns: 1fr; } }
+    
+    .chart-container { background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem; height: 350px;}
+    
+    .insights-container { display: flex; flex-direction: column; gap: 1rem; max-height: 800px; overflow-y: auto; padding-right: 0.5rem;}
+    .insight-card {
+      background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.1); border-left: 4px solid var(--primary);
+      border-radius: 8px; padding: 1rem; transition: transform 0.2s;
+    }
+    .insight-card:hover { transform: translateX(5px); }
+    .insight-module { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--primary); margin-bottom: 0.5rem; font-weight: 700; }
+    .insight-text { font-size: 0.95rem; line-height: 1.5; color: #e2e8f0; margin-bottom: 0.5rem; }
+    .insight-meta { font-size: 0.8rem; color: var(--text-muted); display: flex; gap: 1rem;}
+    
+    .empty-state { text-align: center; color: var(--text-muted); padding: 3rem; }
+
+    /* History Tab specific */
+    .history-list-item {
+      display: flex; justify-content: space-between; align-items: center;
+      background: rgba(0,0,0,0.2); border: 1px solid var(--border); border-radius: 12px; padding: 1rem;
+      margin-bottom: 1rem;
+    }
+    .history-date { font-size: 1.1rem; font-weight: 600; }
+    .history-actions { display: flex; gap: 0.5rem; }
+
+    /* Actions Panel */
+    .actions-panel { display: flex; justify-content: space-between; align-items: center; }
+    .btn-trigger { background: linear-gradient(135deg, #3b82f6, #8b5cf6); padding: 1rem 2rem; font-size: 1.1rem; box-shadow: 0 0 15px rgba(59, 130, 246, 0.4); }
+    .btn-trigger:hover { background: linear-gradient(135deg, #2563eb, #7c3aed); box-shadow: 0 0 25px rgba(59, 130, 246, 0.6); }
+    .status-badge { padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; }
+    .status-idle { background: rgba(148, 163, 184, 0.2); color: #94a3b8; }
+    .status-pending { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .status-complete { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: currentColor; animation: pulse-anim 1.5s infinite; }
+    @keyframes pulse-anim { 0% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.7); } 70% { box-shadow: 0 0 0 10px rgba(251, 191, 36, 0); } 100% { box-shadow: 0 0 0 0 rgba(251, 191, 36, 0); } }
+
+    .overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(15, 23, 42, 0.8); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 100; display: none; }
+    .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.1); border-top-color: var(--primary); border-radius: 50%; animation: spin 1s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #docLink { color: #60a5fa; text-decoration: none; margin-left: 1rem; font-size: 0.9rem; }
+    #docLink:hover { text-decoration: underline; }
+    
+    .progress-bar-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+      border-radius: 3px;
+      transition: width 1s linear;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <h1>Research Analytics Dashboard</h1>
+    <p>Filter, Visualize, and Analyze Competitor Intelligence</p>
+  </div>
+
+  <div id="progressContainer" style="display:none; width: 100%; max-width: 800px; margin: 0 auto 2rem auto; background: var(--surface); padding: 1.5rem; border-radius: 12px; border: 1px solid var(--border); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);">
+    <div style="font-size: 1rem; color: var(--text); margin-bottom: 0.75rem; display: flex; justify-content: space-between; font-weight: 600;">
+      <span id="progressText">Agent Workflow Progress: 0%</span>
+      <span id="progressTime">00:00 elapsed</span>
+    </div>
+    <div style="width: 100%; height: 8px; background: rgba(255,255,255,0.1); border-radius: 4px; overflow: hidden;">
+      <div id="progressBarFill" class="progress-bar-fill"></div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <div class="tab active" onclick="switchTab('analytics')">Interactive Dashboard</div>
+    <div class="tab" onclick="switchTab('config')">Data Sources & Config</div>
+    <div class="tab" onclick="switchTab('history')">Historical Archives</div>
+  </div>
+
+  <div class="container">
+    
+    <!-- Config Tab -->
+    <div id="configTab" class="tab-content">
+      <div class="glass-panel">
+        <h2>Competitor Configurations <button id="saveConfigBtn" class="btn" style="font-size:0.8rem; padding: 0.4rem 0.8rem;">Save All Configs</button></h2>
+        <div class="competitor-list" id="compList"></div>
+        <div class="add-competitor">
+          <input type="text" id="newName" placeholder="Competitor Name">
+          <input type="text" id="newUrl" placeholder="Website URL">
+          <button class="btn" onclick="addCompetitor()">Add Competitor</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Analytics Dashboard Tab -->
+    <div id="analyticsTab" class="tab-content active">
+      <div class="glass-panel">
+        <div class="dashboard-filters">
+          <select id="filterCompetitor" class="filter-select" onchange="renderDashboard()">
+            <option value="ALL">All Competitors</option>
+          </select>
+          <select id="filterModule" class="filter-select" onchange="renderDashboard()">
+            <option value="ALL">All Analysis Modules</option>
+            <option value="market_shifts">Market Shifts</option>
+            <option value="competitor_moves">Competitor Moves</option>
+            <option value="customer_pain_points">Customer Pain Points</option>
+            <option value="emerging_trends">Emerging Trends</option>
+            <option value="content_opportunities">Content Opportunities</option>
+            <option value="recommended_actions">Recommended Actions</option>
+          </select>
+          <button class="btn" onclick="loadData()" style="display: flex; align-items: center; gap: 0.5rem; white-space: nowrap;">
+            <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+            Refresh Data
+          </button>
+          <select id="scheduleFilter" class="filter-select" onchange="updateSchedule()" style="max-width: 150px; background: rgba(59, 130, 246, 0.2); border-color: var(--primary);">
+            <option value="Manual">Manual Only</option>
+            <option value="Daily">Auto: Daily</option>
+            <option value="Weekly">Auto: Weekly</option>
+            <option value="Monthly">Auto: Monthly</option>
+          </select>
+        </div>
+
+        <div class="dashboard-grid">
+          <!-- Charts -->
+          <div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="barChart"></canvas></div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="radarChart"></canvas></div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="lineChart"></canvas></div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="doughnutChart"></canvas></div>
+             <div class="chart-container"><canvas id="polarChart"></canvas></div>
+          </div>
+          <!-- Insights Feed -->
+          <div class="insights-container" id="insightsFeed">
+            <div class="empty-state">Loading intelligence...</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- History Tab -->
+    <div id="historyTab" class="tab-content">
+      
+      <!-- List View -->
+      <div class="glass-panel" id="historyListView">
+        <h2>Historical Reports</h2>
+        <div id="historyListContainer">
+           <div class="empty-state">No historical data found.</div>
+        </div>
+      </div>
+
+      <!-- Detail View (The Time Machine) -->
+      <div class="glass-panel" id="historyDetailView" style="display:none;">
+        <h2 style="border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 2rem;">
+          <span id="historyDetailTitle">Historical Dashboard</span>
+          <button class="btn btn-secondary" onclick="closeHistoryDetail()">← Back to History List</button>
+        </h2>
+        
+        <div class="dashboard-filters">
+          <select id="histFilterCompetitor" class="filter-select" onchange="renderHistoryDetailDashboard()">
+            <option value="ALL">All Competitors</option>
+          </select>
+          <select id="histFilterModule" class="filter-select" onchange="renderHistoryDetailDashboard()">
+            <option value="ALL">All Analysis Modules</option>
+            <option value="market_shifts">Market Shifts</option>
+            <option value="competitor_moves">Competitor Moves</option>
+            <option value="customer_pain_points">Customer Pain Points</option>
+            <option value="emerging_trends">Emerging Trends</option>
+            <option value="content_opportunities">Content Opportunities</option>
+            <option value="recommended_actions">Recommended Actions</option>
+          </select>
+        </div>
+
+        <div class="dashboard-grid">
+          <div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="histBarChart"></canvas></div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="histRadarChart"></canvas></div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="histLineChart"></canvas></div>
+             <div class="chart-container" style="margin-bottom:1rem;"><canvas id="histDoughnutChart"></canvas></div>
+             <div class="chart-container"><canvas id="histPolarChart"></canvas></div>
+          </div>
+          <div class="insights-container" id="histInsightsFeed">
+            <div class="empty-state">Loading intelligence...</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Actions Panel -->
+    <div class="glass-panel actions-panel">
+      <div>
+        <div id="statusBadge" class="status-badge status-idle">IDLE</div>
+        <a id="docLink" href="#" target="_blank" style="display:none;">View Latest Google Doc</a>
+      </div>
+      <button class="btn btn-trigger" id="triggerBtn" onclick="triggerJob()">Initialize Agent Workflow</button>
+    </div>
+  </div>
+
+  <div class="overlay" id="loading"><div class="spinner"></div></div>
+
+  <script>
+    let competitors = [];
+    let settings = {};
+    let dashboardData = null;
+    let archiveData = [];
+    
+    // Main charts
+    let barChartInstance = null;
+    let radarChartInstance = null;
+    let lineChartInstance = null;
+    let doughnutChartInstance = null;
+    let polarChartInstance = null;
+
+    // History charts
+    let histBarChartInstance = null;
+    let histRadarChartInstance = null;
+    let histLineChartInstance = null;
+    let histDoughnutChartInstance = null;
+    let histPolarChartInstance = null;
+
+    // Current history focus
+    let currentHistoryData = null;
+    
+    // Timer
+    let jobTimerInterval = null;
+    let jobStartTime = null;
+
+    function showLoading() { document.getElementById('loading').style.display = 'flex'; }
+    function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+    function switchTab(tab) {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+      
+      if(tab === 'analytics') {
+        document.querySelectorAll('.tab')[0].classList.add('active');
+        document.getElementById('analyticsTab').classList.add('active');
+        renderDashboard();
+      } else if (tab === 'config') {
+        document.querySelectorAll('.tab')[1].classList.add('active');
+        document.getElementById('configTab').classList.add('active');
+      } else if (tab === 'history') {
+        document.querySelectorAll('.tab')[2].classList.add('active');
+        document.getElementById('historyTab').classList.add('active');
+        // Ensure we are in list view when switching to tab
+        document.getElementById('historyListView').style.display = 'block';
+        document.getElementById('historyDetailView').style.display = 'none';
+        renderHistoryList();
+      }
+    }
+
+    function loadData() {
+      showLoading();
+      google.script.run.withSuccessHandler(function(data) {
+        competitors = data.competitors || [];
+        settings = data.settings || {};
+        dashboardData = data.dashboardData || null;
+        archiveData = data.archiveData || [];
+        
+        renderCompetitors();
+        updateStatusBadge();
+        updateFilterDropdowns();
+        if(dashboardData) renderDashboard();
+        hideLoading();
+        
+        // Start polling if we loaded the page and it's currently processing
+        if (settings.job_status === 'PENDING' && !window.isPolling) {
+          pollStatus();
+        }
+      }).withFailureHandler(function(err) {
+        alert("Error loading data: " + err);
+        hideLoading();
+      }).apiGetInitialData();
+    }
+
+    function renderCompetitors() {
+      const container = document.getElementById('compList');
+      container.innerHTML = '';
+      competitors.forEach((c, index) => {
+        container.innerHTML += `
+          <div class="competitor-card">
+            <div class="competitor-info">
+              <span class="competitor-name">${c.name}</span>
+              <span class="competitor-url">${c.url}</span>
+            </div>
+            <button class="btn-delete" onclick="removeCompetitor(${index})">Del</button>
+          </div>
+        `;
+      });
+    }
+
+    function addCompetitor() {
+      const name = document.getElementById('newName').value;
+      const url = document.getElementById('newUrl').value;
+      if (name && url) {
+        competitors.push({name, url});
+        document.getElementById('newName').value = '';
+        document.getElementById('newUrl').value = '';
+        renderCompetitors();
+      }
+    }
+
+    function removeCompetitor(index) {
+      if (confirm('Delete ' + competitors[index].name + '?')) {
+        competitors.splice(index, 1);
+        renderCompetitors();
+      }
+    }
+
+    document.getElementById('saveConfigBtn').addEventListener('click', function() {
+      showLoading();
+      google.script.run.withSuccessHandler(hideLoading).apiSaveCompetitors(competitors);
+    });
+
+    function triggerJob() {
+      showLoading();
+      google.script.run.withSuccessHandler(function() {
+        google.script.run.withSuccessHandler(function() {
+          settings.job_status = 'PENDING';
+          updateStatusBadge();
+          hideLoading();
+          pollStatus();
+        }).apiTriggerJob();
+      }).apiSaveCompetitors(competitors);
+    }
+
+    function updateSchedule() {
+      const schedule = document.getElementById('scheduleFilter').value;
+      google.script.run.withSuccessHandler(function() {
+         console.log("Schedule updated to: " + schedule);
+      }).apiUpdateSettings({ schedule: schedule });
+    }
+
+    function updateStatusBadge() {
+        const badge = document.getElementById('statusBadge');
+        if (settings.schedule) {
+          document.getElementById('scheduleFilter').value = settings.schedule;
+        }
+      const docLink = document.getElementById('docLink');
+      const btn = document.getElementById('triggerBtn');
+      const status = settings.job_status || 'IDLE';
+      
+      if (status === 'PENDING') {
+        badge.className = 'status-badge status-pending';
+        badge.innerHTML = '<div class="pulse"></div> PROCESSING';
+        btn.disabled = true; docLink.style.display = 'none';
+        
+        document.getElementById('progressContainer').style.display = 'block';
+        if (!jobTimerInterval) {
+           jobStartTime = settings.job_start_timestamp ? parseInt(settings.job_start_timestamp) : Date.now();
+           jobTimerInterval = setInterval(() => {
+              const elapsed = Math.max(0, Math.floor((Date.now() - jobStartTime) / 1000));
+              const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+              const secs = (elapsed % 60).toString().padStart(2, '0');
+              
+              let percent = settings.job_progress || 0;
+              let text = settings.job_progress_text || 'Processing...';
+              
+              document.getElementById('progressTime').innerText = `${mins}:${secs} elapsed`;
+              document.getElementById('progressText').innerText = `${text} (${percent}%)`;
+              document.getElementById('progressBarFill').style.width = `${percent}%`;
+           }, 1000);
+        }
+      } else if (status === 'COMPLETE') {
+        badge.className = 'status-badge status-complete';
+        badge.innerHTML = 'READY';
+        btn.disabled = false;
+        if (settings.last_doc_url) {
+          docLink.href = settings.last_doc_url; docLink.style.display = 'inline';
+        }
+        
+        if (jobTimerInterval) {
+           document.getElementById('progressText').innerText = `Agent Workflow Progress: 100%`;
+           document.getElementById('progressBarFill').style.width = `100%`;
+           clearInterval(jobTimerInterval); jobTimerInterval = null;
+           setTimeout(() => { document.getElementById('progressContainer').style.display = 'none'; }, 2000);
+        } else {
+           document.getElementById('progressContainer').style.display = 'none';
+        }
+      } else {
+        badge.className = 'status-badge status-idle';
+        badge.innerHTML = 'IDLE';
+        if (settings.last_error) {
+           badge.innerHTML += ` (Error: ${settings.last_error.substring(0,20)}...)`;
+           badge.title = settings.last_error;
+        }
+        btn.disabled = false; docLink.style.display = 'none';
+        document.getElementById('progressContainer').style.display = 'none';
+        if (jobTimerInterval) { clearInterval(jobTimerInterval); jobTimerInterval = null; }
+      }
+    }
+
+    function pollStatus() {
+      if (window.isPolling) return;
+      window.isPolling = true;
+      const interval = setInterval(() => {
+        google.script.run.withSuccessHandler(function(data) {
+          settings = data.settings;
+          updateStatusBadge();
+          if (settings.job_status !== 'PENDING') {
+            clearInterval(interval);
+            window.isPolling = false;
+            // Job finished, now fetch the heavy data
+            google.script.run.withSuccessHandler(function(fullData) {
+              dashboardData = fullData.dashboardData;
+              archiveData = fullData.archiveData || [];
+              updateFilterDropdowns();
+              renderDashboard();
+            }).apiGetInitialData();
+          }
+        }).apiGetStatus();
+      }, 5000);
+    }
+
+
+    // ----------------------------------------------------
+    // HISTORY LOGIC
+    // ----------------------------------------------------
+    function renderHistoryList() {
+      const container = document.getElementById('historyListContainer');
+      container.innerHTML = '';
+      
+      if (!archiveData || archiveData.length === 0) {
+        container.innerHTML = '<div class="empty-state">No historical data found. Complete a run to generate history.</div>';
+        return;
+      }
+      
+      archiveData.forEach((item, index) => {
+         container.innerHTML += `
+           <div class="history-list-item">
+             <div class="history-date">Run Date: ${item.date}</div>
+             <div class="history-actions">
+               <button class="btn" onclick="openHistoryDetail(${index})" ${!item.jsonData ? 'disabled style="opacity:0.5"' : ''}>Report</button>
+               ${item.docUrl ? `<a href="${item.docUrl}" target="_blank" class="btn btn-secondary" style="text-decoration:none; padding: 0.5rem 1rem;">View Docs</a>` : `<button class="btn btn-secondary" disabled style="opacity:0.5; padding: 0.5rem 1rem;">View Docs</button>`}
+             </div>
+           </div>
+         `;
+      });
+    }
+
+    function openHistoryDetail(index) {
+       const item = archiveData[index];
+       if (!item.jsonData) return alert("No JSON data available for this historical run.");
+       
+       try {
+         currentHistoryData = JSON.parse(item.jsonData);
+       } catch (e) {
+         return alert("Error parsing historical data.");
+       }
+       
+       document.getElementById('historyDetailTitle').innerHTML = `Time Machine Report <button class="btn btn-secondary" onclick="closeHistoryDetail()" style="float:right;">← Back to History Tab</button>`;
+       
+       // Update filter dropdown for history
+       const select = document.getElementById('histFilterCompetitor');
+       select.innerHTML = '<option value="ALL">All Competitors</option>';
+       if (currentHistoryData && currentHistoryData.competitor_metrics) {
+         currentHistoryData.competitor_metrics.forEach(m => {
+           if(m.competitor) select.innerHTML += `<option value="${m.competitor}">${m.competitor}</option>`;
+         });
+       }
+
+       document.getElementById('historyListView').style.display = 'none';
+       document.getElementById('historyDetailView').style.display = 'block';
+       
+       renderHistoryDetailDashboard();
+    }
+
+    function closeHistoryDetail() {
+       document.getElementById('historyDetailView').style.display = 'none';
+       document.getElementById('historyListView').style.display = 'block';
+       currentHistoryData = null;
+    }
+
+    function renderHistoryDetailDashboard() {
+       if (!currentHistoryData) return;
+       const compFilter = document.getElementById('histFilterCompetitor').value;
+       const modFilter = document.getElementById('histFilterModule').value;
+       
+       // Render Charts (using 'hist' prefixes)
+       _renderChartsCore(currentHistoryData, compFilter, 'histBarChart', 'histRadarChart', 'histLineChart', 'histDoughnutChart', 'histPolarChart', true);
+       
+       // Render Cards (using 'hist' prefix)
+       _renderCardsCore(currentHistoryData, compFilter, modFilter, 'histInsightsFeed');
+    }
+
+
+    // ----------------------------------------------------
+    // DASHBOARD RENDERING LOGIC (MAIN & HISTORY SHARE THIS)
+    // ----------------------------------------------------
+    function updateFilterDropdowns() {
+      const select = document.getElementById('filterCompetitor');
+      select.innerHTML = '<option value="ALL">All Competitors</option>';
+      if (dashboardData && dashboardData.competitor_metrics) {
+        dashboardData.competitor_metrics.forEach(m => {
+          if(m.competitor) select.innerHTML += `<option value="${m.competitor}">${m.competitor}</option>`;
+        });
+      }
+    }
+
+    function renderDashboard() {
+      if (!dashboardData) {
+        document.getElementById('insightsFeed').innerHTML = '<div class="empty-state">No analysis data available. Initialize Agent Workflow to generate.</div>';
+        return;
+      }
+      const compFilter = document.getElementById('filterCompetitor').value;
+      const modFilter = document.getElementById('filterModule').value;
+      
+      _renderChartsCore(dashboardData, compFilter, 'barChart', 'radarChart', 'lineChart', 'doughnutChart', 'polarChart', false);
+      _renderCardsCore(dashboardData, compFilter, modFilter, 'insightsFeed');
+    }
+
+    function _renderChartsCore(dataObj, compFilter, barId, radarId, lineId, doughId, polarId, isHistory) {
+      const metrics = dataObj.competitor_metrics || [];
+      if(metrics.length === 0) return;
+
+      let labels = [];
+      let painData = [];
+      let featureData = [];
+      let aggressionData = [];
+      let threatData = [];
+
+      if (compFilter !== 'ALL') {
+         const m = metrics.find(x => x.competitor === compFilter);
+         if(m) {
+           labels = [m.competitor];
+           painData = [m.pain_point_severity_score || 0];
+           featureData = [m.feature_adoption_rate || 0];
+           aggressionData = [m.market_aggression_score || 0];
+           threatData = [Math.round(((m.pain_point_severity_score || 0) + (m.feature_adoption_rate || 0) + (m.market_aggression_score || 0)) / 3)];
+         }
+      } else {
+         metrics.forEach(m => {
+           labels.push(m.competitor || 'Unknown');
+           painData.push(m.pain_point_severity_score || 0);
+           featureData.push(m.feature_adoption_rate || 0);
+           aggressionData.push(m.market_aggression_score || 0);
+           threatData.push(Math.round(((m.pain_point_severity_score || 0) + (m.feature_adoption_rate || 0) + (m.market_aggression_score || 0)) / 3));
+         });
+      }
+
+      Chart.defaults.color = '#94a3b8';
+      
+      // Select the correct set of global instance variables
+      let chartRefs = isHistory ? 
+          { bar: histBarChartInstance, radar: histRadarChartInstance, line: histLineChartInstance, dough: histDoughnutChartInstance, polar: histPolarChartInstance } : 
+          { bar: barChartInstance, radar: radarChartInstance, line: lineChartInstance, dough: doughnutChartInstance, polar: polarChartInstance };
+
+      // Bar Chart
+      const ctxBar = document.getElementById(barId).getContext('2d');
+      if (chartRefs.bar) chartRefs.bar.destroy();
+      chartRefs.bar = new Chart(ctxBar, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [
+            { label: 'Pain Severity', data: painData, backgroundColor: 'rgba(59, 130, 246, 0.8)' },
+            { label: 'Market Aggression', data: aggressionData, backgroundColor: 'rgba(239, 68, 68, 0.8)' }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' } } }
+      });
+
+      // Radar Chart
+      const ctxRadar = document.getElementById(radarId).getContext('2d');
+      if (chartRefs.radar) chartRefs.radar.destroy();
+      chartRefs.radar = new Chart(ctxRadar, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Feature Adoption Rate',
+            data: featureData,
+            backgroundColor: 'rgba(16, 185, 129, 0.8)',
+          }]
+        },
+        options: { indexAxis: 'y', responsive: true, maintainAspectRatio: false }
+      });
+
+      // Line Chart
+      const ctxLine = document.getElementById(lineId).getContext('2d');
+      if (chartRefs.line) chartRefs.line.destroy();
+      chartRefs.line = new Chart(ctxLine, {
+        type: 'bar',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Composite Threat Score (Average)',
+            data: threatData,
+            backgroundColor: 'rgba(245, 158, 11, 0.8)',
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // Doughnut
+      const ctxDoughnut = document.getElementById(doughId).getContext('2d');
+      if (chartRefs.dough) chartRefs.dough.destroy();
+      chartRefs.dough = new Chart(ctxDoughnut, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Market Aggression Share',
+            data: aggressionData,
+            backgroundColor: [
+              'rgba(59, 130, 246, 0.8)',
+              'rgba(16, 185, 129, 0.8)',
+              'rgba(245, 158, 11, 0.8)',
+              'rgba(239, 68, 68, 0.8)',
+              'rgba(139, 92, 246, 0.8)'
+            ]
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+
+      // Polar
+      const ctxPolar = document.getElementById(polarId).getContext('2d');
+      if (chartRefs.polar) chartRefs.polar.destroy();
+      chartRefs.polar = new Chart(ctxPolar, {
+        type: 'line',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: 'Pain Severity Volatility',
+            data: painData,
+            backgroundColor: 'rgba(139, 92, 246, 0.2)',
+            borderColor: 'rgba(139, 92, 246, 1)',
+            borderWidth: 3,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: 'rgba(139, 92, 246, 1)',
+            pointRadius: 4
+          }]
+        },
+        options: { responsive: true, maintainAspectRatio: false }
+      });
+      
+      // Save refs back
+      if (isHistory) {
+         histBarChartInstance = chartRefs.bar; histRadarChartInstance = chartRefs.radar; histLineChartInstance = chartRefs.line; histDoughnutChartInstance = chartRefs.dough; histPolarChartInstance = chartRefs.polar;
+      } else {
+         barChartInstance = chartRefs.bar; radarChartInstance = chartRefs.radar; lineChartInstance = chartRefs.line; doughnutChartInstance = chartRefs.dough; polarChartInstance = chartRefs.polar;
+      }
+    }
+
+    function _renderCardsCore(dataObj, compFilter, modFilter, feedId) {
+      const feed = document.getElementById(feedId);
+      feed.innerHTML = '';
+      
+      const modules = ['market_shifts', 'competitor_moves', 'customer_pain_points', 'emerging_trends', 'content_opportunities', 'recommended_actions'];
+      
+      modules.forEach(mod => {
+        if (modFilter !== 'ALL' && modFilter !== mod) return;
+        
+        const items = dataObj[mod] || [];
+        items.forEach(item => {
+           const itemStr = JSON.stringify(item).toLowerCase();
+           if (compFilter !== 'ALL') {
+             const m = (dataObj.competitor_metrics || []).find(x => x.competitor === compFilter);
+             if (m && itemStr.indexOf(m.competitor.toLowerCase()) === -1 && item.source_url && item.source_url.indexOf(m.competitor.toLowerCase()) === -1) {
+               if(item.competitor && item.competitor.toLowerCase() !== m.competitor.toLowerCase()) return;
+             }
+           }
+           
+           let title = '';
+           let text = '';
+           let url = '';
+
+           if (typeof item === 'string') {
+             text = item.replace(/\n/g, '<br>');
+           } else {
+             url = item.source_url || '';
+             let titleBase = item.competitor || '';
+             
+             if (!url) {
+                const urlMatch = JSON.stringify(item).match(/(https?:\/\/[^\s"']+)/);
+                if (urlMatch) url = urlMatch[1];
+             }
+
+             if (!titleBase && url) {
+                const compMatch = competitors.find(c => c.url && url.toLowerCase().includes(c.url.toLowerCase().replace(/^https?:\/\/(www\.)?/, '').split('?')[0]));
+                if (compMatch) titleBase = compMatch.name;
+                else {
+                   const igMatch = url.match(/instagram\.com\/([^\/\?]+)/);
+                   if (igMatch) titleBase = igMatch[1];
+                }
+             }
+             if (titleBase) titleBase = titleBase.toUpperCase();
+
+             if(mod === 'market_shifts' || mod === 'customer_pain_points') {
+               title = titleBase; text = item.insight;
+             } else if (mod === 'competitor_moves') {
+               title = titleBase; text = item.action;
+             } else if (mod === 'emerging_trends') {
+               title = titleBase ? `${titleBase} - ${item.trend}` : item.trend; text = item.evidence;
+             } else if (mod === 'content_opportunities') {
+               title = titleBase ? `${titleBase} - ${item.topic}` : item.topic; 
+               text = item.rationale;
+             } else if (mod === 'recommended_actions') {
+               title = titleBase; 
+               text = item.action;
+             }
+             
+             if (typeof text === 'object' && text !== null) {
+               text = JSON.stringify(text);
+             }
+           }
+           
+           if (!text) return;
+
+           feed.innerHTML += `
+             <div class="insight-card">
+               <div class="insight-module">${mod.replace(/_/g, ' ')}</div>
+               ${title ? `<div style="font-weight:600; margin-bottom:0.25rem;">${title}</div>` : ''}
+               <div class="insight-text">${text}</div>
+               ${url ? `<div class="insight-meta"><a href="${url}" target="_blank" style="color:var(--primary);text-decoration:none;"> Source URL</a></div>` : ''}
+             </div>
+           `;
+        });
+      });
+      
+      if (feed.innerHTML === '') feed.innerHTML = '<div class="empty-state">No insights match the current filters.</div>';
+    }
+
+    // Init
+    window.onload = loadData;
+  </script>
+</body>
+</html>

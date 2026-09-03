@@ -1,10 +1,16 @@
 import sys
+import json
 import time
 from datetime import datetime, timezone
 
 from pipeline.collectors import (
     fetch_competitor_content,
     fetch_config,
+    fetch_market_news,
+    fetch_social_listening,
+    fetch_google_reviews,
+    fetch_emerging_trends,
+    fetch_youtube_content,
 )
 from pipeline.config import load_settings
 from pipeline.errors import format_exception_alert, logger, post_slack_alert
@@ -60,11 +66,27 @@ def run_job() -> None:
         logger.info("Config loaded: %s competitors", len(competitors))
 
         logger.info("Scraping competitor sites...")
+        update_job_status(settings.apps_script_url, settings.apps_script_token, "PENDING", progress=10, progress_text="Scraping competitor sites...")
         competitor_content = fetch_competitor_content(competitors)
         logger.info("Collected %s raw competitor items", len(competitor_content))
+        
+        logger.info("Executing autonomous API collectors...")
+        update_job_status(settings.apps_script_url, settings.apps_script_token, "PENDING", progress=50, progress_text="Executing autonomous API collectors...")
+        # User requested to ONLY use Instagram scraping to run instantly in one batch
+        # if settings.serper_api_key:
+        #     competitor_content.extend(fetch_market_news(settings.serper_api_key, settings.geo, competitors))
+        #     competitor_content.extend(fetch_social_listening(settings.serper_api_key, settings.geo, competitors))
+        #     competitor_content.extend(fetch_emerging_trends(settings.serper_api_key, settings.geo, competitors))
+        #     competitor_content.extend(fetch_youtube_content(settings.serper_api_key, settings.geo, competitors))
+            
+        # if settings.google_places_api_key:
+        #     competitor_content.extend(fetch_google_reviews(settings.google_places_api_key, settings.geo, competitors))
+            
+        logger.info("Total data chunks collected: %s", len(competitor_content))
 
         chunks = normalize_and_tag(competitor_content)
         logger.info("Calling Groq to synthesize the digest...")
+        update_job_status(settings.apps_script_url, settings.apps_script_token, "PENDING", progress=75, progress_text="Calling LLM to synthesize the digest...")
         
         raw_report = call_groq(
             chunks, 
@@ -74,6 +96,12 @@ def run_job() -> None:
         )
 
         logger.info("Validation passed. Formatting and publishing...")
+        update_job_status(settings.apps_script_url, settings.apps_script_token, "PENDING", progress=90, progress_text="Formatting and publishing Google Doc...")
+
+        # Save a local backup of the report in case Google Docs publishing fails
+        with open("report_backup.json", "w", encoding="utf-8") as f:
+            json.dump(raw_report, f, indent=2)
+        logger.info("Saved local backup to report_backup.json")
 
         run_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 

@@ -44,51 +44,27 @@ def _sourced(items, fmt):
 
 def format_markdown(report: dict, chunks: list[dict]) -> str:
     today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
-    sections = [
-        f"# Research Digest - {today}",
-        "",
-        "## Executive summary",
-        _bullets(report.get("executive_summary")),
-        "",
-        "## Market and industry shifts",
-        _sourced(report.get("market_shifts"), _fmt_market_shift),
-        "",
-        "## Competitor moves",
-        _sourced(report.get("competitor_moves"), _fmt_competitor_move),
-        "",
-        "## Customer pain points",
-        _sourced(report.get("customer_pain_points"), _fmt_pain_point),
-        "",
-        "## Emerging trends",
-        _sourced(report.get("emerging_trends"), _fmt_trend),
-        "",
-        "## Content opportunities",
-        _sourced(report.get("content_opportunities"), _fmt_opportunity),
-        "## Recommended actions this week",
-        _sourced(report.get("recommended_actions"), lambda m: f"Competitor: {m.get('competitor', 'Unknown')}\nAction: {m.get('action', m)}\nSource: {m.get('source_url', '')}\n" if isinstance(m, dict) else str(m)),
-        "",
-        "## Sources",
-        _sourced([{"url": c["url"]} for c in chunks if "url" in c], _fmt_source),
-        "",
-    ]
-    return "\n".join(sections)
-
-
-def format_markdown(report: dict, chunks: list[dict]) -> str:
     sections = []
+    
+    sections.append(f"Research Digest - {today}")
+    sections.append("")
     
     url_to_title = {c.get('url'): c.get('source', 'Unknown Competitor') for c in chunks if c.get('url')}
     
     if report.get("executive_summary"):
-        sections.append("EXECUTIVE SUMMARY\n")
+        sections.append("EXECUTIVE SUMMARY")
+        sections.append("")
         for s in report["executive_summary"]:
             sections.append(s)
-        sections.append("\n==================================================\n")
+        sections.append("")
+        sections.append("==================================================")
+        sections.append("")
             
     def _add_section(title: str, items: list, text_key: str):
         if not items:
             return
-        sections.append(f"{title}\n")
+        sections.append(title)
+        sections.append("")
         import re
         for m in items:
             url = m.get("source_url", "")
@@ -104,6 +80,9 @@ def format_markdown(report: dict, chunks: list[dict]) -> str:
                     url = url_match.group(1)
                     # Clean the url from the text
                     text = re.sub(r'Source_url:\s*https?://[^\s]+', '', text, flags=re.IGNORECASE).strip()
+            
+            if not url:
+                url = "Multiple Sources"
                     
             comp_name = m.get("competitor", url_to_title.get(url, "Unknown Competitor"))
             if comp_name == "Unknown Competitor" and url_to_title.get(url):
@@ -112,8 +91,11 @@ def format_markdown(report: dict, chunks: list[dict]) -> str:
             sections.append(comp_name.upper())
             sections.append(text)
             sections.append(f"URL: {url}")
-            sections.append("\n--------------------------------------------------\n")
-        sections.append("==================================================\n")
+            sections.append("")
+            sections.append("--------------------------------------------------")
+            sections.append("")
+        sections.append("==================================================")
+        sections.append("")
             
     _add_section("MARKET SHIFTS", report.get("market_shifts", []), "insight")
     _add_section("COMPETITOR MOVES", report.get("competitor_moves", []), "action")
@@ -121,10 +103,13 @@ def format_markdown(report: dict, chunks: list[dict]) -> str:
     _add_section("EMERGING TRENDS", report.get("emerging_trends", []), "trend")
     
     if report.get("content_opportunities"):
-        sections.append("CONTENT OPPORTUNITIES\n")
+        sections.append("CONTENT OPPORTUNITIES")
+        sections.append("")
         import re
         for m in report["content_opportunities"]:
             url = m.get("source_url", "")
+            if not url:
+                url = "Multiple Sources"
             comp_name = m.get("competitor", url_to_title.get(url, "Unknown Competitor"))
             if comp_name == "Unknown Competitor" and url_to_title.get(url):
                 comp_name = url_to_title.get(url)
@@ -133,8 +118,11 @@ def format_markdown(report: dict, chunks: list[dict]) -> str:
             sections.append(f"Topic: {m.get('topic', '')} ({m.get('format', '')}, {m.get('urgency', '')})")
             sections.append(f"Rationale: {m.get('rationale', '')}")
             sections.append(f"URL: {url}")
-            sections.append("\n--------------------------------------------------\n")
-        sections.append("==================================================\n")
+            sections.append("")
+            sections.append("--------------------------------------------------")
+            sections.append("")
+        sections.append("==================================================")
+        sections.append("")
             
     _add_section("RECOMMENDED ACTIONS", report.get("recommended_actions", []), "action")
             
@@ -177,12 +165,16 @@ def publish_slack_digest(report: dict, doc_url: str, slack_bot_token: str, chann
     resp.raise_for_status()
 
 
-def update_job_status(apps_script_url: str, token: str, status: str, error: str = "") -> None:
+def update_job_status(apps_script_url: str, token: str, status: str, error: str = "", progress: int = None, progress_text: str = "") -> None:
     try:
+        payload = {"status": status, "error": error}
+        if progress is not None:
+            payload["progress"] = progress
+            payload["progress_text"] = progress_text
         requests.post(
             apps_script_url,
             params={"action": "update_status", "token": token},
-            json={"status": status, "error": error},
+            json=payload,
             timeout=15,
         )
     except Exception as e:
