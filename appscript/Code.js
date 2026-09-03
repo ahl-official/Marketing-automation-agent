@@ -320,17 +320,18 @@ function apiSaveCompetitors(competitors) {
 function apiTriggerJob() {
   updateSettings({ job_status: 'PENDING', last_doc_url: '', last_error: '', job_start_timestamp: new Date().getTime().toString(), job_progress: 0, job_progress_text: 'Initializing Agent Workflow...' });
   
-  // Trigger the Vercel backend directly so it starts scraping immediately
+  // Trigger the Render Webhook so it starts scraping immediately in the background
   try {
-    const url = "https://marketing-automation-agent.vercel.app/api/index";
+    // IMPORTANT: Replace this URL with your actual Render URL after deploying!
+    const url = "https://n8n.hairscalptradingco.com/webhook/trigger-marketing-agent";
     const options = {
-      method: "get",
+      method: "post",
       muteHttpExceptions: true
     };
-    // Fire and forget (Vercel will process it in the background)
+    // Send webhook and immediately continue (Render will process in background)
     UrlFetchApp.fetch(url, options);
   } catch(e) {
-    Logger.log("Failed to ping Vercel: " + e.toString());
+    Logger.log("Failed to ping Webhook: " + e.toString());
   }
   
   return true;

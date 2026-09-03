@@ -1,0 +1,22 @@
+{
+  "executive_summary": [
+    "Test summary string"
+  ],
+  "market_shifts": [
+    "Insight: Shift 1\nSource: http://test\n"
+  ],
+  "competitor_moves": [],
+  "customer_pain_points": [
+    "Pain Point Analysis: Pain 1\nSource: http://test2\n"
+  ],
+  "emerging_trends": [],
+  "content_opportunities": [],
+  "recommended_actions": [],
+  "competitor_metrics": [
+    {
+      "competitor": "C1",
+      "pain_point_severity_score": 50
+    }
+  ],
+  "sources_appendix": []
+}
